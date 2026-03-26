@@ -1,0 +1,27 @@
+FROM rockylinux/rockylinux:10
+
+RUN dnf update -y \
+    && dnf groupinstall -y "Development Tools" \
+    && dnf install -y rsync createrepo \
+    && dnf install -y 'dnf-command(config-manager)' 
+
+RUN dnf config-manager --set-enabled crb -y \
+    && dnf install -y \
+    rpm-build \
+    rpmdevtools \
+    systemd-rpm-macros \
+    && dnf clean all
+
+# Create build-spec script
+RUN echo '#!/bin/bash' > /usr/local/bin/build-spec && \
+    echo 'set -e' >> /usr/local/bin/build-spec && \
+    echo 'SPEC_FILE="$1"' >> /usr/local/bin/build-spec && \
+    echo 'cd /rpmbuild' >> /usr/local/bin/build-spec && \
+    echo 'spectool -g -C /rpmbuild/SOURCES "$SPEC_FILE"' >> /usr/local/bin/build-spec && \
+    echo 'rpmbuild --define "_topdir /rpmbuild" -ba "$SPEC_FILE"' >> /usr/local/bin/build-spec && \
+    chmod +x /usr/local/bin/build-spec
+
+WORKDIR /rpmbuild
+
+ENV RPM_BUILD_ROOT=/rpmbuild
+

@@ -1,0 +1,59 @@
+name: Build Prometheus2 EL10 RPM
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: 'Release name (e.g. v0.4.10)'
+        required: true
+        default: ''
+      draft:
+        description: 'Create as draft release'
+        type: boolean
+        default: true
+
+jobs:
+  build-rpm:
+    name: Build RPM for EL10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make
+
+      - name: Build Rocky10 Docker Image
+        run: make build-rocky10-image
+
+      - name: Build Prometheus2 RPM
+        run: make build10-prometheus2
+
+      - name: Upload Binary RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: prometheus2-el10-rpm
+          path: _dist10_RPM/*.rpm
+          if-no-files-found: error
+
+      - name: Upload Source RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: prometheus2-el10-srpm
+          path: _dist10_SRPM/*.rpm
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch' && inputs.release_name != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_name }}
+          name: ${{ inputs.release_name }}
+          draft: ${{ inputs.draft }}
+          files: _dist10_RPM/*.rpm
+

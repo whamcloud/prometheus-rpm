@@ -72,9 +72,29 @@ all: auto manual
 manual: $(MANUAL)
 auto: $(AUTO_GENERATED)
 
+manual10: $(addprefix build10-,$(MANUAL))
 manual9: $(addprefix build9-,$(MANUAL))
 manual8: $(addprefix build8-,$(MANUAL))
 manual7: $(addprefix build7-,$(MANUAL))
+
+# Build the Rocky Linux 10 builder image from Dockerfile
+.PHONY: build-rocky10-image
+build-rocky10-image:
+	docker build -f Dockerfile.rocky10 -t rocky10-rpm-builder:latest .
+
+$(addprefix build10-,$(MANUAL)): build-rocky10-image
+	$(eval PACKAGE=$(subst build10-,,$@))
+	[ -d ${PWD}/_dist10_RPM ] || mkdir ${PWD}/_dist10_RPM
+	[ -d ${PWD}/_dist10_SRPM ] || mkdir ${PWD}/_dist10_SRPM
+	[ -d ${PWD}/_cache_dnf ] || mkdir ${PWD}/_cache_dnf
+	docker run ${DOCKER_FLAGS} \
+		-v ${PWD}/${PACKAGE}:/rpmbuild/SOURCES \
+		-v ${PWD}/_dist10_RPM:/rpmbuild/RPMS/x86_64 \
+		-v ${PWD}/_dist10_RPM:/rpmbuild/RPMS/noarch \
+		-v ${PWD}/_dist10_SRPM:/rpmbuild/SRPMS/ \
+		-v ${PWD}/_cache_dnf:/var/cache/dnf \
+		rocky10-rpm-builder:latest \
+		build-spec SOURCES/${PACKAGE}.spec
 
 $(addprefix build9-,$(MANUAL)):
 	$(eval PACKAGE=$(subst build9-,,$@))
@@ -240,6 +260,7 @@ sign7:
 $(foreach \
 	PACKAGE,$(MANUAL),$(eval \
 		${PACKAGE}: \
+			$(addprefix build10-,${PACKAGE}) \
 			$(addprefix build9-,${PACKAGE}) \
 			$(addprefix build8-,${PACKAGE}) \
 			$(addprefix build7-,${PACKAGE}) \
