@@ -1,4 +1,6 @@
 MANUAL = prometheus2 \
+systemd_exporter \
+node_exporter \
 thanos \
 jmx_exporter \
 rabbitmq_exporter \
@@ -84,6 +86,10 @@ build-rocky10-image:
 
 $(addprefix build10-,$(MANUAL)): build-rocky10-image
 	$(eval PACKAGE=$(subst build10-,,$@))
+	# If the package is prometheus2, use the prometheus2.spec file, otherwise use the autogen_${PACKAGE}.spec file
+	$(eval SPEC_FILE=$(if $(filter prometheus2,$(PACKAGE)),${PACKAGE}.spec,autogen_${PACKAGE}.spec))
+	$(if $(filter prometheus2,$(PACKAGE)),,python3 ./generate.py --templates ${PACKAGE})
+
 	[ -d ${PWD}/_dist10_RPM ] || mkdir ${PWD}/_dist10_RPM
 	[ -d ${PWD}/_dist10_SRPM ] || mkdir ${PWD}/_dist10_SRPM
 	[ -d ${PWD}/_cache_dnf ] || mkdir ${PWD}/_cache_dnf
@@ -94,7 +100,7 @@ $(addprefix build10-,$(MANUAL)): build-rocky10-image
 		-v ${PWD}/_dist10_SRPM:/rpmbuild/SRPMS/ \
 		-v ${PWD}/_cache_dnf:/var/cache/dnf \
 		rocky10-rpm-builder:latest \
-		build-spec SOURCES/${PACKAGE}.spec
+		build-spec SOURCES/${SPEC_FILE}
 
 $(addprefix build9-,$(MANUAL)):
 	$(eval PACKAGE=$(subst build9-,,$@))

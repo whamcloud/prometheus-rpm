@@ -1,4 +1,4 @@
-name: Build Prometheus2 EL10 RPM
+name: Build EL10 RPMs
 
 on:
   push:
@@ -16,8 +16,8 @@ on:
         default: true
 
 jobs:
-  build-rpm:
-    name: Build RPM for EL10
+  build-prometheus2-rpm:
+    name: Build Prometheus2 RPM for EL10
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -45,6 +45,88 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: prometheus2-el10-srpm
+          path: _dist10_SRPM/*.rpm
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch' && inputs.release_name != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_name }}
+          name: ${{ inputs.release_name }}
+          draft: ${{ inputs.draft }}
+          files: _dist10_RPM/*.rpm
+
+  build-systemd_exporter-rpm:
+    name: Build Systemd Exporter RPM for EL10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make
+
+      - name: Build Rocky10 Docker Image
+        run: make build-rocky10-image
+
+      - name: Build Systemd Exporter RPM
+        run: make build10-systemd_exporter
+
+      - name: Upload Binary RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: systemd_exporter-el10-rpm
+          path: _dist10_RPM/*.rpm
+          if-no-files-found: error
+
+      - name: Upload Source RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: systemd_exporter-el10-srpm
+          path: _dist10_SRPM/*.rpm
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch' && inputs.release_name != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_name }}
+          name: ${{ inputs.release_name }}
+          draft: ${{ inputs.draft }}
+          files: _dist10_RPM/*.rpm
+
+  build-node_exporter-rpm:
+    name: Build Node Exporter RPM for EL10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make
+
+      - name: Build Rocky10 Docker Image
+        run: make build-rocky10-image
+
+      - name: Build Node Exporter RPM
+        run: make build10-node_exporter
+
+      - name: Upload Binary RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_exporter-el10-rpm
+          path: _dist10_RPM/*.rpm
+          if-no-files-found: error
+
+      - name: Upload Source RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_exporter-el10-srpm
           path: _dist10_SRPM/*.rpm
           if-no-files-found: error
 
