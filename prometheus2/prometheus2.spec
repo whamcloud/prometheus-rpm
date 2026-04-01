@@ -11,6 +11,7 @@ Provides: prometheus
 Source0: https://github.com/prometheus/prometheus/releases/download/v%{version}/prometheus-%{version}.linux-amd64.tar.gz
 Source1: %{name}.service
 Source2: %{name}.default
+Source3: https://github.com/prometheus-community/systemd_exporter/releases/download/v0.7.0/systemd_exporter-0.7.0.linux-amd64.tar.gz
 
 %{?systemd_requires}
 %if 0%{?fedora} >= 19
@@ -25,7 +26,7 @@ configured targets at given intervals, evaluates rule expressions, displays the
 results, and can trigger alerts if some condition is observed to be true.
 
 %prep
-%setup -q -n prometheus-%{version}.linux-amd64
+%setup -q -n prometheus-%{version}.linux-amd64 -a 3
 
 %build
 /bin/true
@@ -34,6 +35,7 @@ results, and can trigger alerts if some condition is observed to be true.
 mkdir -vp %{buildroot}%{_sharedstatedir}/prometheus
 install -D -m 755 prometheus %{buildroot}%{_bindir}/prometheus
 install -D -m 755 promtool %{buildroot}%{_bindir}/promtool
+install -D -m 755 systemd_exporter-0.7.0.linux-amd64/systemd_exporter %{buildroot}%{_bindir}/systemd_exporter
 for dir in console_libraries consoles; do
   for file in ${dir}/*; do
     install -D -m 644 ${file} %{buildroot}%{_datarootdir}/prometheus/${file}
@@ -63,6 +65,7 @@ exit 0
 %defattr(-,root,root,-)
 %{_bindir}/prometheus
 %{_bindir}/promtool
+%{_bindir}/systemd_exporter
 %config(noreplace) %{_sysconfdir}/prometheus/prometheus.yml
 %{_datarootdir}/prometheus
 %{_unitdir}/prometheus.service
