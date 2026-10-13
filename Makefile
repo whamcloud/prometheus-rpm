@@ -7,6 +7,9 @@ rabbitmq_exporter \
 ping_exporter \
 couchbase_exporter \
 mtail \
+fishymetrics \
+kafka_exporter \
+mongodb_exporter \
 
 AUTO_GENERATED = alertmanager \
 node_exporter \
@@ -84,11 +87,36 @@ manual7: $(addprefix build7-,$(MANUAL))
 build-rocky10-image:
 	docker build -f Dockerfile.rocky10 -t rocky10-rpm-builder:latest .
 
+# fishymetrics has no prebuilt upstream release, so build the binary from the
+# pinned commit and produce a tarball shaped like the other exporters'
+# downloaded tarballs, before generate.py/rpmbuild run.
+FISHYMETRICS_VERSION = 0.20.0
+FISHYMETRICS_COMMIT = 3b3124f56fef2b0ea41209411a3ff938fd3e467d
+FISHYMETRICS_GIT_URL = https://github.com/Comcast/fishymetrics.git
+
+.PHONY: fishymetrics-tarball
+fishymetrics-tarball: build-rocky10-image
+	[ -f fishymetrics/fishymetrics-${FISHYMETRICS_VERSION}.linux-amd64.tar.gz ] || docker run ${DOCKER_FLAGS} \
+		-v ${PWD}/fishymetrics:/out \
+		rocky10-rpm-builder:latest \
+		/bin/bash -c '\
+			set -euxo pipefail; \
+			git clone "${FISHYMETRICS_GIT_URL}" /tmp/src; \
+			cd /tmp/src; \
+			git checkout "${FISHYMETRICS_COMMIT}"; \
+			go build -o fishymetrics ./cmd/fishymetrics; \
+			mkdir -p "/tmp/fishymetrics-${FISHYMETRICS_VERSION}.linux-amd64"; \
+			cp fishymetrics "/tmp/fishymetrics-${FISHYMETRICS_VERSION}.linux-amd64/"; \
+			tar czf "/out/fishymetrics-${FISHYMETRICS_VERSION}.linux-amd64.tar.gz" \
+				-C /tmp "fishymetrics-${FISHYMETRICS_VERSION}.linux-amd64" \
+		'
+
 $(addprefix build10-,$(MANUAL)): build-rocky10-image
 	$(eval PACKAGE=$(subst build10-,,$@))
 	# If the package is prometheus2, use the prometheus2.spec file, otherwise use the autogen_${PACKAGE}.spec file
 	$(eval SPEC_FILE=$(if $(filter prometheus2,$(PACKAGE)),${PACKAGE}.spec,autogen_${PACKAGE}.spec))
 	$(if $(filter prometheus2,$(PACKAGE)),,python3 ./generate.py --templates ${PACKAGE})
+	$(if $(filter fishymetrics,$(PACKAGE)),$(MAKE) fishymetrics-tarball,)
 
 	[ -d ${PWD}/_dist10_RPM ] || mkdir ${PWD}/_dist10_RPM
 	[ -d ${PWD}/_dist10_SRPM ] || mkdir ${PWD}/_dist10_SRPM

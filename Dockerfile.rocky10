@@ -10,6 +10,8 @@ RUN dnf config-manager --set-enabled crb -y \
     rpm-build \
     rpmdevtools \
     systemd-rpm-macros \
+    golang \
+    git \
     && dnf clean all
 
 # Create build-spec script
