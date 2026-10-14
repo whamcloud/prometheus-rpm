@@ -1,4 +1,4 @@
-name: Build EL10 RPMs
+name: Build EL8/EL9/EL10 RPMs
 
 on:
   push:
@@ -16,14 +16,18 @@ on:
         default: true
 
 jobs:
-  build-el10-rpm:
-    name: Build ${{ matrix.package }} RPM for EL10
+  build-rpm:
+    name: Build ${{ matrix.package }} RPM for EL${{ matrix.el }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
+        el:
+          - 8
+          - 9
+          - 10
         package:
           - prometheus2
           - systemd_exporter
@@ -40,24 +44,29 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y make
 
-      - name: Build Rocky10 Docker Image
-        run: make build-rocky10-image
-
+      # No explicit "docker build" step here: the Makefile declares
+      # build-rocky10-image as a prerequisite wherever it's actually needed
+      # (build10-* targets, and fishymetrics-tarball for any EL version), so
+      # make builds it automatically only when required. Building it
+      # unconditionally here would waste time on the el8/el9 non-fishymetrics
+      # jobs, which never touch that image.
       - name: Build ${{ matrix.package }} RPM
-        run: make build10-${{ matrix.package }}
+        run: make build${{ matrix.el }}-${{ matrix.package }}
+
+      - name: Resolve dist directory
+        id: dist
+        run: |
+          if [ "${{ matrix.el }}" = "10" ]; then
+            echo "dir=_dist10_RPM" >> "$GITHUB_OUTPUT"
+          else
+            echo "dir=_dist${{ matrix.el }}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload Binary RPM
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.package }}-el10-rpm
-          path: _dist10_RPM/*.rpm
-          if-no-files-found: error
-
-      - name: Upload Source RPM
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.package }}-el10-srpm
-          path: _dist10_SRPM/*.rpm
+          name: ${{ matrix.package }}-el${{ matrix.el }}-rpm
+          path: ${{ steps.dist.outputs.dir }}/*.rpm
           if-no-files-found: error
 
       - name: Create GitHub Release
@@ -67,4 +76,4 @@ jobs:
           tag_name: ${{ inputs.release_name }}
           name: ${{ inputs.release_name }}
           draft: ${{ inputs.draft }}
-          files: _dist10_RPM/*.rpm
+          files: ${{ steps.dist.outputs.dir }}/*.rpm

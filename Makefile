@@ -104,7 +104,7 @@ fishymetrics-tarball: build-rocky10-image
 			git clone "${FISHYMETRICS_GIT_URL}" /tmp/src; \
 			cd /tmp/src; \
 			git checkout "${FISHYMETRICS_COMMIT}"; \
-			go build -o fishymetrics ./cmd/fishymetrics; \
+			CGO_ENABLED=0 go build -o fishymetrics ./cmd/fishymetrics; \
 			mkdir -p "/tmp/fishymetrics-${FISHYMETRICS_VERSION}.linux-amd64"; \
 			cp fishymetrics "/tmp/fishymetrics-${FISHYMETRICS_VERSION}.linux-amd64/"; \
 			tar czf "/out/fishymetrics-${FISHYMETRICS_VERSION}.linux-amd64.tar.gz" \
@@ -119,30 +119,33 @@ $(addprefix build10-,$(MANUAL)): build-rocky10-image
 	$(if $(filter fishymetrics,$(PACKAGE)),$(MAKE) fishymetrics-tarball,)
 
 	[ -d ${PWD}/_dist10_RPM ] || mkdir ${PWD}/_dist10_RPM
-	[ -d ${PWD}/_dist10_SRPM ] || mkdir ${PWD}/_dist10_SRPM
 	[ -d ${PWD}/_cache_dnf ] || mkdir ${PWD}/_cache_dnf
 	docker run ${DOCKER_FLAGS} \
 		-v ${PWD}/${PACKAGE}:/rpmbuild/SOURCES \
 		-v ${PWD}/_dist10_RPM:/rpmbuild/RPMS/x86_64 \
 		-v ${PWD}/_dist10_RPM:/rpmbuild/RPMS/noarch \
-		-v ${PWD}/_dist10_SRPM:/rpmbuild/SRPMS/ \
 		-v ${PWD}/_cache_dnf:/var/cache/dnf \
 		rocky10-rpm-builder:latest \
 		build-spec SOURCES/${SPEC_FILE}
 
 $(addprefix build9-,$(MANUAL)):
 	$(eval PACKAGE=$(subst build9-,,$@))
-	[ -d ${PWD}/_dist9 ] || mkdir ${PWD}/_dist9 
-	[ -d ${PWD}/_cache_dnf ] || mkdir ${PWD}/_cache_dnf 
+	# If the package is prometheus2, use the prometheus2.spec file, otherwise use the autogen_${PACKAGE}.spec file
+	$(eval SPEC_FILE=$(if $(filter prometheus2,$(PACKAGE)),${PACKAGE}.spec,autogen_${PACKAGE}.spec))
+	$(if $(filter prometheus2,$(PACKAGE)),,python3 ./generate.py --templates ${PACKAGE})
+	$(if $(filter fishymetrics,$(PACKAGE)),$(MAKE) fishymetrics-tarball,)
+
+	[ -d ${PWD}/_dist9 ] || mkdir ${PWD}/_dist9
+	[ -d ${PWD}/_cache_dnf ] || mkdir ${PWD}/_cache_dnf
 	docker run ${DOCKER_FLAGS} \
 		-v ${PWD}/${PACKAGE}:/rpmbuild/SOURCES \
 		-v ${PWD}/_dist9:/rpmbuild/RPMS/x86_64 \
 		-v ${PWD}/_dist9:/rpmbuild/RPMS/noarch \
 		-v ${PWD}/_cache_dnf:/var/cache/dnf \
 		ghcr.io/lest/centos-rpm-builder:oracle9 \
-		build-spec SOURCES/${PACKAGE}.spec
+		build-spec SOURCES/${SPEC_FILE}
 	# Test the install
-	[ -d ${PWD}/_dist9 ] || mkdir ${PWD}/_dist9      
+	[ -d ${PWD}/_dist9 ] || mkdir ${PWD}/_dist9
 	[ -d ${PWD}/_cache_dnf ] || mkdir ${PWD}/_cache_dnf
 	docker run --privileged ${DOCKER_FLAGS} \
 		-v ${PWD}/_dist9:/var/tmp/ \
@@ -152,17 +155,22 @@ $(addprefix build9-,$(MANUAL)):
 
 $(addprefix build8-,$(MANUAL)):
 	$(eval PACKAGE=$(subst build8-,,$@))
-	[ -d ${PWD}/_dist8 ] || mkdir ${PWD}/_dist8 
-	[ -d ${PWD}/_cache_dnf ] || mkdir ${PWD}/_cache_dnf 
+	# If the package is prometheus2, use the prometheus2.spec file, otherwise use the autogen_${PACKAGE}.spec file
+	$(eval SPEC_FILE=$(if $(filter prometheus2,$(PACKAGE)),${PACKAGE}.spec,autogen_${PACKAGE}.spec))
+	$(if $(filter prometheus2,$(PACKAGE)),,python3 ./generate.py --templates ${PACKAGE})
+	$(if $(filter fishymetrics,$(PACKAGE)),$(MAKE) fishymetrics-tarball,)
+
+	[ -d ${PWD}/_dist8 ] || mkdir ${PWD}/_dist8
+	[ -d ${PWD}/_cache_dnf ] || mkdir ${PWD}/_cache_dnf
 	docker run ${DOCKER_FLAGS} \
 		-v ${PWD}/${PACKAGE}:/rpmbuild/SOURCES \
 		-v ${PWD}/_dist8:/rpmbuild/RPMS/x86_64 \
 		-v ${PWD}/_dist8:/rpmbuild/RPMS/noarch \
 		-v ${PWD}/_cache_dnf:/var/cache/dnf \
 		ghcr.io/lest/centos-rpm-builder:oracle8 \
-		build-spec SOURCES/${PACKAGE}.spec
+		build-spec SOURCES/${SPEC_FILE}
 	# Test the install
-	[ -d ${PWD}/_dist8 ] || mkdir ${PWD}/_dist8      
+	[ -d ${PWD}/_dist8 ] || mkdir ${PWD}/_dist8
 	[ -d ${PWD}/_cache_dnf ] || mkdir ${PWD}/_cache_dnf
 	docker run --privileged ${DOCKER_FLAGS} \
 		-v ${PWD}/_dist8:/var/tmp/ \
