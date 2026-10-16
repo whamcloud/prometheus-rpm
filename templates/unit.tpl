@@ -18,6 +18,12 @@ RestartSec=5s
 {% if open_file_limit is defined -%}
 LimitNOFILE={{open_file_limit}}
 {% endif %}
+{% if memory_max is defined -%}
+MemoryMax={{memory_max}}
+{% endif %}
+{% if memory_high is defined -%}
+MemoryHigh={{memory_high}}
+{% endif %}
 {%- endblock service %}
 
 [Install]

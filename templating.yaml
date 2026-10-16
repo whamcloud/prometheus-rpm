@@ -267,6 +267,8 @@ packages:
         version: 1.10.0
         license: ASL 2.0
         URL: https://github.com/danielqsj/kafka_exporter
+        memory_max: 1G
+        memory_high: 900M
         summary: Kafka exporter for Prometheus.
         description: Kafka exporter for Prometheus.
   fishymetrics:
@@ -298,6 +300,8 @@ packages:
         ExecStart=/usr/bin/{{name}} ${{name|upper}}_OPTS
         Restart=on-failure
         RestartSec=5
+        MemoryMax=1G
+        MemoryHigh=900M
         StandardOutput=journal
         StandardError=journal
         {%- endblock service %}
@@ -459,6 +463,8 @@ packages:
         license: ASL 2.0
         URL: https://github.com/percona/mongodb_exporter
         package: '%{name}-%{version}.linux-amd64'
+        memory_max: 1G
+        memory_high: 900M
         summary: A Prometheus exporter for MongoDB including sharding, replication and storage engines
         description: A Prometheus exporter for MongoDB including sharding, replication and storage engines
   graphite_exporter:
