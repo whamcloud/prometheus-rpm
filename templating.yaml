@@ -80,7 +80,7 @@ packages:
       <<: *default_context
       static:
         <<: *default_static_context
-        version: 1.9.0
+        version: 1.12.1
         license: ASL 2.0
         URL: https://github.com/prometheus/node_exporter
         summary: Prometheus exporter for machine metrics, written in Go with pluggable metric collectors.
@@ -264,11 +264,67 @@ packages:
       <<: *default_context
       static:
         <<: *default_static_context
-        version: 1.9.0
+        version: 1.10.0
         license: ASL 2.0
         URL: https://github.com/danielqsj/kafka_exporter
+        memory_max: 1G
+        memory_high: 900M
         summary: Kafka exporter for Prometheus.
         description: Kafka exporter for Prometheus.
+  fishymetrics:
+    build_steps:
+      <<: *default_build_steps
+      unit: |
+        {% extends "unit.tpl" %}
+        {% block unit -%}
+        Description={{summary}}
+        Wants=network-online.target
+        After=network-online.target
+        {%- endblock unit %}
+        {% block service -%}
+        Type=simple
+        User={{user}}
+        Group={{group}}
+        NoNewPrivileges=true
+        ProtectSystem=strict
+        ProtectHome=true
+        PrivateTmp=true
+        ProtectKernelTunables=true
+        ProtectControlGroups=true
+        RestrictAddressFamilies=AF_INET AF_INET6
+        # fishymetrics reads BMC/Vault credentials and proxy settings from these env
+        # vars (see upstream README); strip any inherited from the host/session so
+        # the only supported input is EnvironmentFile= below.
+        UnsetEnvironment=BMC_USERNAME BMC_PASSWORD BMC_TIMEOUT BMC_SCHEME BMC_CREDENTIALS_SCRIPT EXPORTER_PORT VAULT_ADDRESS VAULT_ROLE_ID VAULT_SECRET_ID HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy
+        EnvironmentFile=-/etc/default/{{name}}
+        ExecStart=/usr/bin/{{name}} ${{name|upper}}_OPTS
+        Restart=on-failure
+        RestartSec=5
+        MemoryMax=1G
+        MemoryHigh=900M
+        StandardOutput=journal
+        StandardError=journal
+        {%- endblock service %}
+    context:
+      <<: *default_context
+      static:
+        <<: *default_static_context
+        version: 0.20.0
+        license: ASL 2.0
+        URL: https://github.com/Comcast/fishymetrics
+        user: fishymetrics
+        group: fishymetrics
+        summary: Prometheus exporter for Redfish-based hardware metrics.
+        description: |
+          Fishymetrics is a Prometheus exporter for hardware component and
+          sensor metrics exposed via the Redfish API.
+        # Comcast does not publish a prebuilt release tarball, so the binary
+        # is built out-of-band (see `make fishymetrics-tarball`) and the
+        # resulting tarball is committed to fishymetrics/ before rpmbuild
+        # runs. %build stays a no-op, same as every other exporter here.
+      dynamic:
+        <<: *default_dynamic_context
+        tarball: '{{package}}.tar.gz'
   nginx_exporter:
     build_steps:
       <<: *default_build_steps
@@ -403,10 +459,12 @@ packages:
       <<: *default_context
       static:
         <<: *default_static_context
-        version: 0.43.1
+        version: 0.53.0
         license: ASL 2.0
         URL: https://github.com/percona/mongodb_exporter
         package: '%{name}-%{version}.linux-amd64'
+        memory_max: 1G
+        memory_high: 900M
         summary: A Prometheus exporter for MongoDB including sharding, replication and storage engines
         description: A Prometheus exporter for MongoDB including sharding, replication and storage engines
   graphite_exporter:
