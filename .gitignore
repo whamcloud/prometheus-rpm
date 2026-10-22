@@ -1,4 +1,6 @@
 _dist*
+_cache_dnf
+_cache_yum
 *.tar.gz
 # Hacked in until  https://github.com/oliver006/redis_exporter/issues/173 is resolved
 !redis_exporter/*.tar.gz
