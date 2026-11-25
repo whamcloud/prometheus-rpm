@@ -1,8 +1,9 @@
+---
 name: Build EL8/EL9/EL10 RPMs
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -45,11 +46,8 @@ jobs:
           sudo apt-get install -y make
 
       # No explicit "docker build" step here: the Makefile declares
-      # build-rocky10-image as a prerequisite wherever it's actually needed
-      # (build10-* targets, and fishymetrics-tarball for any EL version), so
-      # make builds it automatically only when required. Building it
-      # unconditionally here would waste time on the el8/el9 non-fishymetrics
-      # jobs, which never touch that image.
+      # build-rocky10-image as a prerequisite for EL10 RPMs and for exporters
+      # built from source (fishymetrics and systemd_exporter) on any EL version.
       - name: Build ${{ matrix.package }} RPM
         run: make build${{ matrix.el }}-${{ matrix.package }}
 

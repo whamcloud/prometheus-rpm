@@ -111,6 +111,16 @@ fishymetrics-tarball: build-rocky10-image
 				-C /tmp "fishymetrics-${FISHYMETRICS_VERSION}.linux-amd64" \
 		'
 
+# Build one Linux/amd64 binary in the same toolchain for every EL RPM.
+.PHONY: systemd-exporter-tarball
+systemd-exporter-tarball: build-rocky10-image
+	docker run $(DOCKER_FLAGS) \
+		-v "$(CURDIR)/systemd_exporter:/out" \
+		rocky10-rpm-builder:latest \
+		bash /out/build-tarball.sh /out
+
+build8-systemd_exporter build9-systemd_exporter build10-systemd_exporter: systemd-exporter-tarball
+
 $(addprefix build10-,$(MANUAL)): build-rocky10-image
 	$(eval PACKAGE=$(subst build10-,,$@))
 	# If the package is prometheus2, use the prometheus2.spec file, otherwise use the autogen_${PACKAGE}.spec file
